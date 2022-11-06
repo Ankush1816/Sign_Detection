@@ -1,13 +1,32 @@
-
-
+import 'dart:io';
 import 'package:brew_for_crew/services/auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dumb_home.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
   final AuthService _auth = AuthService();
 
+  File? image;
+
+  Future pickImage() async{
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (image == null)
+        return;
+      setState(() =>
+      this.image = File(image.path)
+      );
+    }
+    on PlatformException catch(e){
+      print("Something went wrong: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,14 +80,18 @@ class Home extends StatelessWidget {
                   height: 15,
                 ),
                 Container(
-                  child: Container(
-                    height: 350,
+                  child: image!=null ? Image.file(image!,
+                    height: 500,
                     width: 350,
-                  ),
-                  padding: EdgeInsets.only(
-                      left: 150, right: 150, top: 80, bottom: 80),
+                    fit: BoxFit.contain
+                  ): Icon(Icons.image),
+                  height: 500,
+                  width: 350,
+                  // padding: EdgeInsets.only(
+                  //     left: 150, right: 150, top: 80, bottom: 80),
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
+                    // image: DecorationImage(image: ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -120,6 +143,7 @@ class Home extends StatelessWidget {
                     hoverColor: Colors.brown[300],
                     onPressed: () {
                       // Add your onPressed code here!
+                      pickImage();
                     },
                     child: const Icon(Icons.video_call),
                   ),
