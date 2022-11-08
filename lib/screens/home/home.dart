@@ -3,6 +3,7 @@ import 'package:brew_for_crew/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:tflite/tflite.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -11,148 +12,154 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final AuthService _auth = AuthService();
+  PickedFile? _image;
+  bool _loading = false;
 
-  File? image;
+  List<dynamic>? _outputs;
 
-  Future pickImage() async{
-    try {
-      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (image == null)
-        return;
-      setState(() =>
-      this.image = File(image.path)
-      );
-    }
-    on PlatformException catch(e){
-      print("Something went wrong: $e");
-    }
+  //Load the Tflite model
+  loadModel() async {
+    await Tflite.loadModel(
+      model: "assets/model_unquant.tflite",
+      labels: "assets/labels.txt",
+    );
   }
+
+  classifyImage(image) async {
+    var output = await Tflite.runModelOnImage(
+      path: image.path,
+      numResults: 2,
+      threshold: 0.5,
+      imageMean: 127.5,
+      imageStd: 127.5,
+    );
+    setState(() {
+      _loading = false;
+//Declare List _outputs in the class which will be used to show the classified classs name and confidence
+      _outputs = output;
+    });
+  }
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
-    return //StreamProvider<List<Brew>?>.value(
-      //   value: DatabaseService().brews,
-      //   initialData: null,
-      //   catchError: (_, __) => null,
-      //   child:
-      Scaffold(
-        backgroundColor: Colors.grey[300],
-        appBar: AppBar(
-            title: Text('Dumb Talk'),
-            backgroundColor: Colors.brown[400],
-            elevation: 0,
-            actions: <Widget>[
-              TextButton.icon(
-                icon: Icon(
-                  Icons.person,
-                  color: Colors.brown[800],
-                ),
-                onPressed: () async {
-                  await _auth.signOut();
-                },
-                label: Text('logout', style: TextStyle(color: Colors.brown[800])),
-              )
-            ]),
-        drawer: Drawer(
-            child: Container(
-              child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-                Padding(
-                  padding: EdgeInsets.all(15.0),
-                  child: CircleAvatar(
-                    minRadius: 50,
-                  ),
-                ),
-                SizedBox(height: 15),
-                Padding(
-                  padding: EdgeInsets.all(18.0),
-                  child: Column(
-                    children: [Text('data')],
-                  ),
-                ),
-              ]),
-            )),
-        body: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(
+          title: Text('Dumb Talk'),
+          backgroundColor: Colors.brown[400],
+          elevation: 0,
+          actions: <Widget>[
+            TextButton.icon(
+              icon: Icon(
+                Icons.person,
+                color: Colors.brown[800],
+              ),
+              onPressed: () async {
+                await _auth.signOut();
+              },
+              label: Text('logout', style: TextStyle(color: Colors.brown[800])),
+            )
+          ]),
+      drawer: Drawer(
           child: Container(
-            margin: EdgeInsets.only(top: 20, left: 30, right: 30),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 15,
+            child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+              Padding(
+                padding: EdgeInsets.all(15.0),
+                child: CircleAvatar(
+                  minRadius: 50,
                 ),
-                Container(
-                  child: image!=null ? Image.file(image!,
-                    height: 500,
-                    width: 350,
-                    fit: BoxFit.contain
-                  ): Icon(Icons.image),
-                  height: 500,
-                  width: 350,
-                  // padding: EdgeInsets.only(
-                  //     left: 150, right: 150, top: 80, bottom: 80),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    // image: DecorationImage(image: ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.shade500,
-                        offset: Offset(4, 4),
-                        blurRadius: 15,
-                        spreadRadius: 1,
-                      ),
-                      BoxShadow(
-                        color: Colors.white,
-                        offset: Offset(-4, -4),
-                        blurRadius: 15,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
+              ),
+              SizedBox(height: 15),
+              Padding(
+                padding: EdgeInsets.all(18.0),
+                child: Column(
+                  children: [Text('data')],
                 ),
-                SizedBox(
-                  height: 35,
-                ),
-                Container(
-                  child: Text('hello'),
-                  padding:
-                  EdgeInsets.only(left: 120, right: 120, top: 30, bottom: 30),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.shade500,
-                        offset: Offset(4, 4),
-                        blurRadius: 15,
-                        spreadRadius: 1,
-                      ),
-                      BoxShadow(
-                        color: Colors.white,
-                        offset: Offset(-4, -4),
-                        blurRadius: 15,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 15,),
-                Padding(
-                  padding: const EdgeInsets.only(left: 280.0,top: 8),
-                  child: FloatingActionButton(
-                    backgroundColor: Colors.cyan,
-                    hoverColor: Colors.brown[300],
-                    onPressed: () {
-                      // Add your onPressed code here!
-                      pickImage();
-                    },
-                    child: const Icon(Icons.video_call),
-                  ),
-                )
-              ],
+              ),
+            ]),
+          )),
+      body: _loading
+          ? Container(
+        alignment: Alignment.center,
+        child: CircularProgressIndicator(),
+      )
+          : Container(
+        width: MediaQuery.of(context).size.width,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _image == null ? Container() : Image.file(File(_image!.path)),
+            SizedBox(
+              height: 10,
             ),
-          ),
+            _outputs != null
+                ? Text(
+              '${_outputs![0]["label"]}',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 20.0,
+                background: Paint()..color = Colors.white,
+              ),
+            )
+                : Container()
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _optiondialogbox,
+        backgroundColor: Colors.cyan,
+        child: Icon(Icons.image),
+      ),
+    );
+  }
 
-      );
+  Future<void> _optiondialogbox() {
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Colors.grey,
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  GestureDetector(
+                    child: Text(
+                      "Take a Picture",
+                      style: TextStyle(color: Colors.white, fontSize: 20.0),
+                    ),
+                    onTap: openCamera,
+                  ),
+                  Padding(padding: EdgeInsets.all(10.0)),
+                  GestureDetector(
+                    child: Text(
+                      "Select image ",
+                      style: TextStyle(color: Colors.white, fontSize: 20.0),
+                    ),
+                    onTap: openGallery,
+                  )
+                ],
+              ),
+            ),
+          );
+        });
+  }
+
+  Future openCamera() async {
+    var image = await _picker.getImage(source: ImageSource.camera);
+
+    setState(() {
+      _image = image;
+    });
+  }
+
+  //camera method
+  Future openGallery() async {
+    var piture = await _picker.getImage(source: ImageSource.gallery);
+    setState(() {
+      _image = piture;
+    });
+    classifyImage(piture);
   }
 }
