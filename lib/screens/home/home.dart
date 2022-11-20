@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:brew_for_crew/services/auth.dart';
 import 'package:flutter/material.dart';
@@ -23,10 +24,13 @@ class _HomeState extends State<Home> {
       model: "assets/model_unquant.tflite",
       labels: "assets/labels.txt",
     );
+    log("Model loaded-----------");
   }
 
   classifyImage(image) async {
     await loadModel();
+    log("CLASSIFY------------");
+
     var output = await Tflite.runModelOnImage(
       path: image.path,
       numResults: 2,
@@ -34,7 +38,7 @@ class _HomeState extends State<Home> {
       imageMean: 127.5,
       imageStd: 127.5,
     );
-    print("++++++++++++class++++++++++++++++++++++++++");
+    log("Output---------"+output.toString());
     setState(() {
       _loading = false;
 //Declare List _outputs in the class which will be used to show the classified classs name and confidence
@@ -46,6 +50,9 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+
+
+    // loadModel();
     return Scaffold(
       appBar: AppBar(
           title: Text('Dumb Talk'),
@@ -65,59 +72,53 @@ class _HomeState extends State<Home> {
           ]),
       drawer: Drawer(
           child: Container(
-        child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Padding(
-            padding: EdgeInsets.all(15.0),
-            child: CircleAvatar(
-              minRadius: 50,
-            ),
-          ),
-          SizedBox(height: 15),
-          Padding(
-            padding: EdgeInsets.all(18.0),
-            child: Column(
-              children: [Text('data')],
-            ),
-          ),
-        ]),
-      )),
+            child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+              Padding(
+                padding: EdgeInsets.all(15.0),
+                child: CircleAvatar(
+                  minRadius: 50,
+                ),
+              ),
+              SizedBox(height: 15),
+              Padding(
+                padding: EdgeInsets.all(18.0),
+                child: Column(
+                  children: [Text('data')],
+                ),
+              ),
+            ]),
+          )),
       body: _loading
           ? Container(
-              alignment: Alignment.center,
-              child: CircularProgressIndicator(),
-            )
+        alignment: Alignment.center,
+        child: CircularProgressIndicator(),
+      )
           : Container(
-              width: MediaQuery.of(context).size.width,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                      padding: EdgeInsets.all(10),
-                      width: 320,height: 620,
-                      child: _image == null ? Container() : Image.file(File(_image!.path))),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  _outputs != null
-                      ? Container(
-                    padding: EdgeInsets.all(10),
-                    width: 100,
-                          height: 40,
-                          color: Colors.white,
-                          child: Text(
-                            '${_outputs![0]["label"]}',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 20.0,
-                              background: Paint()..color = Colors.white,
-                            ),
-                          ),
-                        )
-                      : Container()
-                ],
-              ),
+        width: MediaQuery.of(context).size.width,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+                padding: EdgeInsets.all(10),
+                width: 320,height: 620,
+                child: _image == null ? Container() : Image.file(File(_image!.path))),
+            SizedBox(
+              height: 10,
             ),
+            _outputs != null
+                ? Text(
+              '${_outputs![0]["label"]}',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 20.0,
+                background: Paint()..color = Colors.white,
+              ),
+            )
+                : Container()
+          ],
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _optiondialogbox,
         backgroundColor: Colors.cyan,
@@ -163,6 +164,8 @@ class _HomeState extends State<Home> {
     setState(() {
       _image = image;
     });
+    classifyImage(_image);
+
   }
 
   //camera method
@@ -171,6 +174,6 @@ class _HomeState extends State<Home> {
     setState(() {
       _image = piture;
     });
-    classifyImage(piture);
+    classifyImage(_image);
   }
 }
